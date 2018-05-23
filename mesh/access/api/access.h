@@ -343,6 +343,13 @@ void access_init(void);
  */
 void access_clear(void);
 
+//#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+/**
+ * Retrieves the total number of allocated models over all elements.
+ */
+uint16_t access_model_allocated_count(void);
+//#endif
+
 /**
  * Allocates, initializes and adds a model to the element at the given element index.
  *

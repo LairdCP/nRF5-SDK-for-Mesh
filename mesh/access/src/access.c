@@ -69,7 +69,7 @@
 static access_common_t m_model_pool[ACCESS_MODEL_COUNT];
 
 /** Access element pool. @ref ACCESS_ELEMENT_COUNT is set by user at compile time. */
-static access_element_t m_element_pool[ACCESS_ELEMENT_COUNT];
+static access_element_t m_element_pool[ACCESS_ELEMENT_COUNT_MAX];
 
 /** Access subscription list pool. Makes it possible to share a subscription list  */
 static access_subscription_list_t m_subscription_list_pool[ACCESS_SUBSCRIPTION_LIST_COUNT];
@@ -83,7 +83,7 @@ static uint8_t m_default_ttl = ACCESS_DEFAULT_TTL;
 /* ********** Static asserts ********** */
 
 NRF_MESH_STATIC_ASSERT(ACCESS_MODEL_COUNT > 0);
-NRF_MESH_STATIC_ASSERT(ACCESS_ELEMENT_COUNT > 0);
+NRF_MESH_STATIC_ASSERT(ACCESS_ELEMENT_COUNT_MAX > 0);
 NRF_MESH_STATIC_ASSERT(ACCESS_PUBLISH_RESOLUTION_MAX <=
                        ((1 << ACCESS_PUBLISH_STEP_RES_BITS) - 1));
 NRF_MESH_STATIC_ASSERT(ACCESS_PUBLISH_PERIOD_STEP_MAX <=
@@ -226,7 +226,7 @@ static bool is_opcode_of_model(access_common_t * p_model, access_opcode_t opcode
 
 static inline bool model_handle_valid_and_allocated(access_model_handle_t handle)
 {
-    return (handle < ACCESS_MODEL_COUNT && ACCESS_INTERNAL_STATE_IS_ALLOCATED(m_model_pool[handle].internal_state));
+    return ((handle < ACCESS_MODEL_COUNT) && ACCESS_INTERNAL_STATE_IS_ALLOCATED(m_model_pool[handle].internal_state));
 }
 
 static void handle_incoming(const access_message_rx_t * p_message)
@@ -507,7 +507,7 @@ static bool m_flash_not_ready;
 static flash_manager_t m_flash_manager;
 
 NRF_MESH_STATIC_ASSERT(ACCESS_MODEL_COUNT < FLASH_HANDLE_TO_ACCESS_HANDLE_MASK);
-NRF_MESH_STATIC_ASSERT(ACCESS_ELEMENT_COUNT < FLASH_HANDLE_TO_ACCESS_HANDLE_MASK);
+NRF_MESH_STATIC_ASSERT(ACCESS_ELEMENT_COUNT_MAX < FLASH_HANDLE_TO_ACCESS_HANDLE_MASK);
 NRF_MESH_STATIC_ASSERT(ACCESS_SUBSCRIPTION_LIST_COUNT < FLASH_HANDLE_TO_ACCESS_HANDLE_MASK);
 /* We have used ACCESS_MODEL_STATE_FLASH_SIZE as the LARGEST_ENTRY_SIZE in the FLASH_MANAGER_PAGE_COUNT_MINIMUM macro below so verify: */
 NRF_MESH_STATIC_ASSERT(ACCESS_SUBS_LIST_FLASH_SIZE < ACCESS_MODEL_STATE_FLASH_SIZE && ACCESS_MODEL_STATE_FLASH_SIZE > ACCESS_ELEMENTS_FLASH_SIZE);
@@ -771,7 +771,7 @@ static inline uint32_t metadata_store(void)
     {
         access_flash_metadata_t * p_metadata = (access_flash_metadata_t *) p_entry->data;
         p_metadata->element_count = ACCESS_ELEMENT_COUNT;
-        p_metadata->model_count = ACCESS_MODEL_COUNT;
+        p_metadata->model_count = access_model_allocated_count();
         p_metadata->subscription_list_count = ACCESS_SUBSCRIPTION_LIST_COUNT;
         flash_manager_entry_commit(p_entry);
         m_metadata_stored = true;
@@ -1643,7 +1643,9 @@ uint32_t access_element_models_get(uint16_t element_index, access_model_handle_t
         *p_count = 0;
         for (uint32_t i = 0; i < ACCESS_MODEL_COUNT; ++i)
         {
-            if (*p_count >= max_count)
+//#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+            if (*p_count > max_count)    /* was (*p_count >= max_count) */
+//#endif                
             {
                 return NRF_ERROR_INVALID_LENGTH;
             }
@@ -1720,3 +1722,20 @@ uint32_t access_model_publication_by_appkey_stop(dsm_handle_t appkey_handle)
 
     return NRF_SUCCESS;
 }
+
+//#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+uint16_t access_model_allocated_count(void)
+{
+    uint16_t count=0;
+
+    for (unsigned i = 0; i < ACCESS_MODEL_COUNT; ++i)
+    {
+        if (ACCESS_INTERNAL_STATE_IS_ALLOCATED(m_model_pool[i].internal_state))
+        {
+           count++;
+        }
+    }
+    return count;
+}
+//#endif
+

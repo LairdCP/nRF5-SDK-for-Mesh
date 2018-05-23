@@ -108,7 +108,7 @@ void config_composition_data_get(uint8_t * p_data, uint16_t * p_size)
         {
             NRF_MESH_ASSERT(access_element_location_get(i, (uint16_t*) &element.location) == NRF_SUCCESS);
 
-            element_models_count = ACCESS_MODEL_COUNT;
+            element_models_count = access_model_allocated_count();
             NRF_MESH_ASSERT(access_element_models_get(i, &model_handles[0], &element_models_count) == NRF_SUCCESS);
 
             memcpy(&p_data[*p_size], &element, sizeof(element));

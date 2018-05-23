@@ -138,7 +138,11 @@ static void gatt_database_reset(void)
 
 static uint32_t provisionee_start(void)
 {
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    return nrf_mesh_prov_listen(&m_prov_ctx, m_params.p_device_uri, m_params.oob_info_sources, PROV_BEARERS);
+#else
     return nrf_mesh_prov_listen(&m_prov_ctx, m_params.p_device_uri, 0, PROV_BEARERS);
+#endif    
 }
 
 static void prov_evt_handler(const nrf_mesh_prov_evt_t * p_evt)
@@ -194,6 +198,13 @@ uint32_t mesh_provisionee_prov_start(const mesh_provisionee_start_params_t * p_s
         0,
         0
     };
+    
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    if(p_start_params->p_prov_caps)
+    {
+        prov_caps = * p_start_params->p_prov_caps;
+    }
+#endif    
 
     m_params = *p_start_params;
     if (m_params.p_static_data == NULL)

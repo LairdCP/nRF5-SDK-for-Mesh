@@ -40,7 +40,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+#include "nrf_mesh_prov_types.h"
+#endif
 /**
  * @defgroup MESH_PROVISIONEE Mesh examples provisionee support module
  * @ingroup MESH_API_GROUP_APP_SUPPORT
@@ -88,6 +90,11 @@ typedef struct
      * This should be a pointer to a 16 byte long data array.
      */
     const uint8_t * p_static_data;
+    
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    uint16_t  oob_info_sources;
+    const nrf_mesh_prov_oob_caps_t * p_prov_caps;
+#endif        
 
 } mesh_provisionee_start_params_t;
 

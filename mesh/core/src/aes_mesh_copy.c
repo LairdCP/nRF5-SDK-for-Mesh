@@ -34,83 +34,58 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <stdint.h>
 #include <string.h>
-#include <nrf_error.h>
 
-#include "nrf_mesh_defines.h"
-#include "replay_cache.h"
-#include "nrf_mesh_config_core.h"
+#ifdef SOFTDEVICE_PRESENT
+#define ECB_ENCRYPT_TIME_WORST_CASE_US 50
+#include "nrf_soc.h"
+#endif
+
+#include "nrf_error.h"
+#include "nrf.h"
+
+#include "aes.h"
+#include "timeslot.h"
+#include "toolchain.h"
 
 typedef struct
 {
-    uint32_t seqno : NETWORK_SEQNUM_BITS;
-    uint16_t src;
-} replay_cache_entry_t;
+    uint8_t key[16];
+    uint8_t clear_text[16];
+    uint8_t cipher_text[16];
+} aes_data_t;
 
-/**
- * @todo Get memory from elsewhere...
- */
-static replay_cache_entry_t m_replay_cache[2][REPLAY_CACHE_ENTRIES];
-
-static uint8_t m_cache_index = 0;
-
-void replay_cache_init(void)
+#if !defined(SOFTDEVICE_PRESENT)
+static void aes_encrypt_hw(aes_data_t * p_aes_data)
 {
-    replay_cache_clear();
-}
+    uint32_t was_masked;
+    _DISABLE_IRQS(was_masked);
+    NRF_ECB->ECBDATAPTR = (uint32_t) p_aes_data;
 
-uint32_t replay_cache_add(uint16_t src, uint32_t seqno, uint8_t ivi)
-{
-    for (uint_fast8_t i = 0; i < REPLAY_CACHE_ENTRIES; ++i)
+    NRF_ECB->EVENTS_ENDECB  = 0;
+    NRF_ECB->TASKS_STARTECB = 1;
+
+    while (NRF_ECB->EVENTS_ENDECB == 0)
     {
-        if (m_replay_cache[ivi][i].src == 0)
-        {
-            /* Free slot! */
-            m_replay_cache[ivi][i].seqno = seqno;
-            m_replay_cache[ivi][i].src   = src;
-            return NRF_SUCCESS;
-        }
-
-        if (m_replay_cache[ivi][i].src == src)
-        {
-            /* Free slot! */
-            m_replay_cache[ivi][i].seqno = seqno;
-            return NRF_SUCCESS;
-        }
+        ; /* Wait for hardware to complete */
     }
 
-    return NRF_ERROR_NO_MEM;
+    NRF_ECB->EVENTS_ENDECB = 0;
+    _ENABLE_IRQS(was_masked);
 }
+#endif
 
-
-bool replay_cache_has_elem(uint16_t src, uint32_t seqno, uint8_t ivi)
+void aes_encrypt(const uint8_t * const key, const uint8_t * const clear_text, uint8_t * const cipher_text)
 {
-    for (uint_fast8_t i = 0; i < REPLAY_CACHE_ENTRIES; ++i)
-    {
-        if (m_replay_cache[ivi][i].src == src)
-        {
-            if (m_replay_cache[ivi][i].seqno < seqno)
-            {
-                return false;
-            }
+    aes_data_t aes_data;
+    memcpy(aes_data.key, key, NRF_MESH_KEY_SIZE);
+    memcpy(aes_data.clear_text, clear_text, NRF_MESH_KEY_SIZE);
 
-            return true;
-        }
-    }
-
-    /* Not to be added to cache unless successful application decrypt! */
-    return false;
-}
-
-void replay_cache_on_iv_update(void)
-{
-    /* Clear old index */
-    m_cache_index = (m_cache_index + 1) & 0x01;
-    memset(m_replay_cache[m_cache_index], 0, sizeof(m_replay_cache[0]));
-}
-
-void replay_cache_clear(void)
-{
-    memset(m_replay_cache, 0, sizeof(m_replay_cache));
-    m_cache_index = 0;
+#if (defined(NRF51) || defined(NRF52_SERIES)) && SOFTDEVICE_PRESENT
+    (void) sd_ecb_block_encrypt((nrf_ecb_hal_data_t *) &aes_data);
+#else
+    aes_encrypt_hw(&aes_data);
+#endif
+    memcpy(cipher_text, aes_data.cipher_text, NRF_MESH_KEY_SIZE);
 }

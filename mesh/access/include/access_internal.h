@@ -77,7 +77,7 @@
 
 #define ACCESS_MODEL_STATE_FLASH_SIZE ((sizeof(fm_header_t) + sizeof(access_model_state_data_t)) * ACCESS_MODEL_COUNT)
 #define ACCESS_SUBS_LIST_FLASH_SIZE   ((sizeof(fm_header_t) + sizeof(access_flash_subscription_list_t)) * ACCESS_SUBSCRIPTION_LIST_COUNT)
-#define ACCESS_ELEMENTS_FLASH_SIZE    ((sizeof(fm_header_t) + sizeof(uint16_t)) * ACCESS_ELEMENT_COUNT)
+#define ACCESS_ELEMENTS_FLASH_SIZE    ((sizeof(fm_header_t) + sizeof(uint16_t)) * ACCESS_ELEMENT_COUNT_MAX)
 #define ACCESS_FLASH_ENTRY_SIZE       (ACCESS_MODEL_STATE_FLASH_SIZE + ACCESS_SUBS_LIST_FLASH_SIZE + ACCESS_ELEMENTS_FLASH_SIZE)
 
 #define FLASH_HANDLE_TO_ACCESS_HANDLE_MASK (0x0FFF) /**< Mask to apply to convert a flash handle to a DSM handle. */
