@@ -246,6 +246,10 @@ static void handle_incoming(const access_message_rx_t * p_message)
             {
                 access_common_t * p_model = &m_model_pool[i];
                 uint32_t opcode_index;
+                if (ACCESS_INTERNAL_STATE_IS_ALLOCATED(p_model->internal_state) )
+                {
+                    __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "handle_incoming(UNICAST): i=%d, appkey=%d  bitfield=0x%08X\n", i, p_message->meta_data.appkey_handle, *p_model->model_info.application_keys_bitfield);
+                }
                 if (ACCESS_INTERNAL_STATE_IS_ALLOCATED(p_model->internal_state) &&
                     p_model->model_info.element_index == element_index &&
                     bitfield_get(p_model->model_info.application_keys_bitfield, p_message->meta_data.appkey_handle) &&
@@ -274,6 +278,7 @@ static void handle_incoming(const access_message_rx_t * p_message)
                 bitfield_get(m_subscription_list_pool[p_model->model_info.subscription_pool_index].bitfield, address_handle) &&
                 is_opcode_of_model(p_model, p_message->opcode, &opcode_index))
             {
+                __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "handle_incoming(notUNICAST): i=%d\n", i);
                 p_model->p_opcode_handlers[opcode_index].handler(i, p_message, p_model->p_args);
             }
         }
@@ -716,6 +721,7 @@ static bool restore_acquired_model(const fm_entry_t * p_entry)
         {
             ACCESS_INTERNAL_STATE_RESTORED_SET(m_subscription_list_pool[p_model_data_entry->subscription_pool_index].internal_state);
         }
+//THIS IS WHERE THE DEVKEY IS PICKED UP
         memcpy(&m_model_pool[index].model_info, p_model_data_entry, sizeof(access_model_state_data_t));
         increment_model_count(p_model_data_entry->element_index, p_model_data_entry->model_id.company_id);
         return true;
@@ -906,6 +912,7 @@ void access_flash_config_store(void)
             ACCESS_INTERNAL_STATE_IS_OUTDATED(m_subscription_list_pool[i].internal_state))
         {
             status = subscription_list_store(i);
+           __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "access_flash_config_store:: subscription_list_store(%d) returned %d\n",i,status);
         }
     }
     /* Store all elements. */
@@ -914,6 +921,7 @@ void access_flash_config_store(void)
         if (ACCESS_INTERNAL_STATE_IS_OUTDATED(m_element_pool[i].internal_state))
         {
             status = element_store(i);
+           __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "access_flash_config_store:: element_store(%d) returned %d\n",i,status);
         }
     }
     /* Store all allocated models. */
@@ -923,6 +931,7 @@ void access_flash_config_store(void)
             ACCESS_INTERNAL_STATE_IS_OUTDATED(m_model_pool[i].internal_state))
         {
             status = model_store(i);
+           __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "access_flash_config_store:: model_store(%d) returned %d\n",i,status);
         }
     }
 
@@ -932,6 +941,7 @@ void access_flash_config_store(void)
             .callback = flash_manager_mem_available,
             .p_args = access_flash_config_store
         };
+        __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "access_flash_config_store:: flash_manager_mem_listener_register\n");
         flash_manager_mem_listener_register(&flash_store_mem_available_struct);
     }
     bearer_event_critical_section_end();
@@ -1353,6 +1363,7 @@ uint32_t access_model_application_bind(access_model_handle_t handle, dsm_handle_
     }
     else
     {
+        __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "access_model_application_bind:: bitfield_SET :: appkey :: handle %d :: bitfield %0x08\n",appkey_handle,*(m_model_pool[handle].model_info.application_keys_bitfield));
         bitfield_set(m_model_pool[handle].model_info.application_keys_bitfield, appkey_handle);
         ACCESS_INTERNAL_STATE_OUTDATED_SET(m_model_pool[handle].internal_state);
         return NRF_SUCCESS;

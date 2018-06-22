@@ -72,7 +72,7 @@ static uint8_t                         m_private_key[NRF_MESH_PROV_PRIVKEY_SIZE]
 static bool                            m_device_provisioned;
 
 
-#if MESH_FEATURE_GATT
+#if MESH_FEATURE_GATT && !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
 static void sd_state_evt_handler(nrf_sdh_state_evt_t state, void * p_context)
 {
     if (!m_doing_gatt_reset)
@@ -159,9 +159,11 @@ static void prov_evt_handler(const nrf_mesh_prov_evt_t * p_evt)
                 if (m_params.prov_complete_cb != NULL)
                 {
                     m_params.prov_complete_cb();
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
 #if MESH_FEATURE_GATT
-                    gatt_database_reset();
+//                    gatt_database_reset();
 #endif  /* MESH_FEATURE_GATT */
+#endif
                 }
             }
             break;

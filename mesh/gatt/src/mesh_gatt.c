@@ -491,19 +491,31 @@ static void connect_evt_handle(const ble_evt_t * p_ble_evt)
     }
 }
 
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
 static void exchange_mtu_req_handle(const ble_evt_t * p_ble_evt)
 {
+    uint32_t nrfErr;
     uint16_t conn_index = conn_handle_to_index(p_ble_evt->evt.gatts_evt.conn_handle);
     if (conn_index != MESH_GATT_CONN_INDEX_INVALID)
     {
         uint16_t client_rx_mtu = p_ble_evt->evt.gatts_evt.params.exchange_mtu_request.client_rx_mtu;
         uint16_t server_rx_mtu = MIN(client_rx_mtu, MESH_GATT_MTU_SIZE_MAX);
 
-        NRF_MESH_ERROR_CHECK(
-            sd_ble_gatts_exchange_mtu_reply(p_ble_evt->evt.gatts_evt.conn_handle, server_rx_mtu));
+        nrfErr=sd_ble_gatts_exchange_mtu_reply(p_ble_evt->evt.gatts_evt.conn_handle, server_rx_mtu);
+        NRF_MESH_ERROR_CHECK(nrfErr);
         m_gatt.connections[conn_index].effective_mtu = server_rx_mtu - MESH_GATT_WRITE_OVERHEAD;
     }
 }
+#else
+void mesh_gatt_on_exchange_mtu_request(uint16_t conn_handle, uint16_t server_rx_mtu)
+{
+    uint16_t conn_index = conn_handle_to_index(conn_handle);
+    if (conn_index != MESH_GATT_CONN_INDEX_INVALID)
+    {
+        m_gatt.connections[conn_index].effective_mtu = server_rx_mtu - MESH_GATT_WRITE_OVERHEAD;
+    }
+}
+#endif
 
 /*******************************************************************************
  * Public API
@@ -668,6 +680,13 @@ uint32_t mesh_gatt_disconnect(uint16_t conn_index)
 
 void mesh_gatt_on_ble_evt(const ble_evt_t * p_ble_evt, void * p_context)
 {
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    if(p_context==NULL)
+    {
+        p_context=&m_gatt;
+    }
+#endif
+    
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
@@ -687,6 +706,7 @@ void mesh_gatt_on_ble_evt(const ble_evt_t * p_ble_evt, void * p_context)
             break;
 
 
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
         /* TODO: The following events should be handled by an SDK module/the application. */
         case BLE_GATTS_EVT_SYS_ATTR_MISSING:
         {
@@ -703,7 +723,10 @@ void mesh_gatt_on_ble_evt(const ble_evt_t * p_ble_evt, void * p_context)
             NRF_MESH_ERROR_CHECK(sd_ble_gatts_sys_attr_set(p_ble_evt->evt.gatts_evt.conn_handle, NULL, 0, 0));
             break;
         }
+#endif
 
+
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
         case BLE_GAP_EVT_DATA_LENGTH_UPDATE_REQUEST:
         {
             ble_gap_data_length_params_t dl_params;
@@ -713,14 +736,23 @@ void mesh_gatt_on_ble_evt(const ble_evt_t * p_ble_evt, void * p_context)
                                                                NULL));
             break;
         }
+#endif
 
+
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
             NRF_MESH_ERROR_CHECK(sd_ble_gap_sec_params_reply(p_ble_evt->evt.gap_evt.conn_handle,
                                                              BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
                                                              NULL,
                                                              NULL));
             break;
+#endif
 
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+        /*
+        This event has already been dealt with by Laird code so need to ensure
+        this is not included because sd_ble_gap_phy_update() retursn BUSY
+        */
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
             ble_gap_phys_t const phys =
@@ -731,11 +763,14 @@ void mesh_gatt_on_ble_evt(const ble_evt_t * p_ble_evt, void * p_context)
             NRF_MESH_ERROR_CHECK(sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys));
             break;
         }
+#endif
 
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
         case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
             exchange_mtu_req_handle(p_ble_evt);
             break;
-
+#endif
+        
         case BLE_GATTS_EVT_SC_CONFIRM:
             break;
 

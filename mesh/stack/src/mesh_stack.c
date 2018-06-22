@@ -106,18 +106,50 @@ uint32_t mesh_stack_init(const mesh_stack_init_params_t * p_init_params,
     (void) dsm_flash_config_load();
     (void) access_flash_config_load();
     bool is_provisioned = mesh_stack_is_device_provisioned();
-#if GATT_PROXY
-    if (is_provisioned)
-    {
-        proxy_init();
-    }
-#endif
-
+    
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
     if (p_device_provisioned != NULL)
     {
         *p_device_provisioned = is_provisioned;
     }
+#endif
+    
+#if GATT_PROXY
+    if (is_provisioned)
+    {
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+        mesh_key_index_t key_index;
+        uint32_t count = 1;
+        nrf_mesh_key_refresh_phase_t kr_phase;
+        status = dsm_subnet_get_all(&key_index, &count);
+        if (status != NRF_SUCCESS)
+        {
+            return status;
+        }
+        status = dsm_subnet_kr_phase_get(dsm_net_key_index_to_subnet_handle(key_index),&kr_phase);
+        if (status != NRF_SUCCESS)
+        {
+            return status;
+        }
+        proxy_init();
+        status = proxy_node_id_enable(NULL, kr_phase);
+        if (status != NRF_SUCCESS)
+        {
+            return status;
+        }
+#else
+        proxy_init();
+#endif        
+    }
+#endif
 
+#if !defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    if (p_device_provisioned != NULL)
+    {
+        *p_device_provisioned = is_provisioned;
+    }
+#endif
+    
     return NRF_SUCCESS;
 }
 
@@ -169,6 +201,7 @@ uint32_t mesh_stack_provisioning_data_store(const nrf_mesh_prov_provisioning_dat
 
     /* Store new config server binding. */
     access_flash_config_store();
+    __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "mesh_stack_provisioning_data_store:: called access_flash_config_store()\n");
     return status;
 }
 

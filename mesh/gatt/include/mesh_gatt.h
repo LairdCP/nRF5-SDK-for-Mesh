@@ -245,6 +245,13 @@ uint32_t mesh_gatt_disconnect(uint16_t conn_index);
  */
 void mesh_gatt_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
 
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+/*
+Added this because main application is handling all this
+*/
+void mesh_gatt_on_exchange_mtu_request(uint16_t conn_handle, uint16_t server_rx_mtu);
+#endif
+
 /** @} end of MESH_GATT */
 
 #endif /* MESH_GATT_H__ */

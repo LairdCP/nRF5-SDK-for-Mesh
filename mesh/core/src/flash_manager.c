@@ -972,6 +972,7 @@ void flash_manager_mem_listener_register(fm_mem_listener_t * p_listener)
     NRF_MESH_ASSERT(p_listener->callback != NULL);
     if (p_listener->queue_elem.p_data == NULL)
     {
+        __LOG(LOG_SRC_ACCESS, LOG_LEVEL_DBG1, "flash_manager_mem_listener_register:: queue_push\n");
         p_listener->queue_elem.p_data = p_listener;
         queue_push(&m_memory_listener_queue, &p_listener->queue_elem);
     }

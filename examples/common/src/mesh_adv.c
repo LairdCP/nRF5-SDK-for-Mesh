@@ -40,6 +40,9 @@
 #include "ble_types.h"
 #include "app_error.h"
 
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    uint8_t * BlePubAdvertMngrAdvSetHandle_Get(void);
+#endif
 /**
  * This is a sample implementation of the `mesh_adv.h` interface.
  * You may change the implementation as long as the interface remains
@@ -130,8 +133,13 @@ void mesh_adv_data_set(uint16_t service_uuid, const uint8_t * p_service_data, ui
     APP_ERROR_CHECK(ble_advdata_encode(&srdata, m_gap_adv_data.scan_rsp_data.p_data, &m_gap_adv_data.scan_rsp_data.len));
 
 #if NRF_SD_BLE_API_VERSION == 6
-
+#if defined(BLE_MESH_SDK_LAIRD_MODIFICATION)
+    uint8_t  *pAdvHandle = BlePubAdvertMngrAdvSetHandle_Get();
+    uint32_t err_code = sd_ble_gap_adv_set_configure(pAdvHandle, &m_gap_adv_data, &m_adv_params);
+    m_adv_handle = *pAdvHandle;
+#else
     uint32_t err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_gap_adv_data, &m_adv_params);
+#endif
     if (err_code == NRF_ERROR_INVALID_STATE)
     {
         err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_gap_adv_data, NULL);
